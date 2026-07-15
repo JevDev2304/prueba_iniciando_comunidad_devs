@@ -1,12 +1,27 @@
-# Sistema de Gestión Escolar — Backend
+# SDD — Sistema de Gestión Escolar (Backend)
 
-Documento de referencia general del proyecto: qué hace, cómo está organizado y qué reglas sigue. Pensado para poder entenderse sin ser el desarrollador que lo escribió, sin bajar al detalle de cada línea de código.
+**Software Design Document**
 
-## 1. ¿Qué es?
+| | |
+|---|---|
+| Alcance | Solo backend (API REST) |
+| Versión | 2.0 |
+
+## 1. Objetivo
+
+Este documento describe el diseño del backend del Sistema de Gestión Escolar: qué problema resuelve, cómo está construido y qué reglas sigue. Está escrito para poder entenderse sin ser quien escribió el código — no baja al detalle de cada línea, pero sí explica las decisiones de fondo (arquitectura, modelo de datos, reglas de negocio). El detalle de implementación línea por línea vive junto al código, en [`backend/README.md`](backend/README.md).
+
+## 2. Alcance
+
+Cubre: qué hace el sistema, el stack elegido, la arquitectura y organización del código, el modelo de datos, las reglas de negocio, los casos de uso expuestos, y el mecanismo de eliminación lógica y auditoría.
+
+No cubre (fuera de alcance de este documento y del proyecto actual): frontend, autenticación/autorización, despliegue a producción, y pruebas automatizadas (pendientes).
+
+## 3. ¿Qué es?
 
 Una API para que un colegio administre su información académica básica: **estudiantes**, **profesores** y **cursos**, y la relación entre los tres. Reemplaza llevar esa información dispersa (planillas, listas sueltas) por un solo sistema centralizado y consultable.
 
-## 2. Stack tecnológico
+## 4. Stack tecnológico
 
 | Componente | Elección |
 |---|---|
@@ -17,7 +32,7 @@ Una API para que un colegio administre su información académica básica: **est
 | Documentación de la API | Swagger — interfaz visual para probar cada funcionalidad desde el navegador |
 | Empaquetado / build | Gradle |
 
-## 3. Cómo está organizado el código
+## 5. Arquitectura y organización del código
 
 El proyecto sigue una arquitectura en tres capas: cada una tiene una responsabilidad única, y solo se comunica con la capa de abajo a través de un contrato definido (una interfaz), nunca de su implementación concreta. Esto permite cambiar el "cómo" de una capa sin afectar a las demás.
 
@@ -32,7 +47,7 @@ El proyecto sigue una arquitectura en tres capas: cada una tiene una responsabil
 ┌───────────────────────▼───────────────────────────────────┐
 │  Service (capa de negocio)                               │
 │  - Interfaz: el contrato (p.ej. EstudianteService)        │
-│  - Impl: las reglas de negocio reales (sección 5)         │
+│  - Impl: las reglas de negocio reales (sección 7)         │
 │  - Depende de interfaces de Repository                    │
 └───────────────────────┬───────────────────────────────────┘
                          │ depende de (interfaz)
@@ -130,7 +145,7 @@ gestion-escolar-backend/
 └── README.md
 ```
 
-## 4. Modelo de datos
+## 6. Modelo de datos
 
 ```
 Profesor                    Curso                      Estudiante
@@ -145,9 +160,9 @@ especialidad                 estudiantes ◀──inscritos──▶ cursos
 - Un **profesor** puede tener varios **cursos** a cargo.
 - Un **curso** tiene siempre **un solo** profesor responsable (obligatorio).
 - Un **curso** puede tener varios **estudiantes** inscritos, y un **estudiante** puede estar en varios **cursos** — relación de muchos a muchos.
-- Existe además una tabla de **auditoría**, que no forma parte del modelo académico en sí, sino que registra el historial de cambios de las otras tres (ver sección 7).
+- Existe además una tabla de **auditoría**, que no forma parte del modelo académico en sí, sino que registra el historial de cambios de las otras tres (ver sección 9).
 
-## 5. Reglas de negocio
+## 7. Reglas de negocio
 
 Condiciones que el sistema hace cumplir siempre, sin excepción:
 
@@ -158,7 +173,7 @@ Condiciones que el sistema hace cumplir siempre, sin excepción:
 5. **Inscribir o retirar a un estudiante de un curso actualiza la relación en ambos sentidos** — nunca queda un lado desactualizado respecto al otro.
 6. **Consultar algo que no existe da una respuesta clara y predecible**, en vez de un error genérico.
 
-## 6. Casos de uso
+## 8. Casos de uso
 
 Para cada una de las tres entidades (estudiantes, profesores, cursos) se puede: listar todos, ver el detalle de uno, crear, actualizar y eliminar. Sobre los cursos, además: inscribir y retirar estudiantes.
 
@@ -171,12 +186,12 @@ Para cada una de las tres entidades (estudiantes, profesores, cursos) se puede: 
 
 Todos estos endpoints se pueden probar directamente desde Swagger, sin necesidad de escribir código.
 
-## 7. Eliminación lógica y auditoría
+## 9. Eliminación lógica y auditoría
 
 **Eliminar no borra la información.** Cuando se elimina un estudiante, profesor o curso, el registro se marca como inactivo en vez de destruirse: deja de aparecer en cualquier consulta normal (para quien lo usa, es como si ya no existiera), pero la información sigue guardada. Esto evita pérdidas por error y permite, por ejemplo, reutilizar el correo de alguien que fue eliminado.
 
 **Todo cambio queda registrado.** Cada vez que se crea, actualiza o elimina un estudiante, profesor o curso, queda una entrada en un historial de auditoría: qué acción fue, sobre qué registro, en qué momento, y cómo quedaron los datos en ese instante. Ese historial es de solo consulta.
 
-## 8. Cómo levantarlo
+## 10. Cómo levantarlo
 
 Los pasos concretos para instalar y correr el proyecto (requisitos, comandos, dónde probarlo) están en [`backend/README.md`](backend/README.md).
