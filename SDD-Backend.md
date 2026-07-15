@@ -9,13 +9,15 @@
 
 ## 1. Objetivo
 
-Este documento describe el diseño del backend del Sistema de Gestión Escolar: qué problema resuelve, cómo está construido y qué reglas sigue. Está escrito para poder entenderse sin ser quien escribió el código — no baja al detalle de cada línea, pero sí explica las decisiones de fondo (arquitectura, modelo de datos, reglas de negocio). El detalle de implementación línea por línea vive junto al código, en [`backend/README.md`](backend/README.md).
+Este documento describe el diseño del backend del Sistema de Gestión Escolar: **qué** problema resuelve y **por qué** está construido así (arquitectura, modelo de datos, reglas de negocio). Está escrito para poder entenderse sin ser quien escribió el código, y no baja al detalle de cada línea — ese nivel de detalle vive en el propio código fuente, no en un documento aparte.
+
+Para los pasos operativos de instalación y ejecución (requisitos, comandos, puertos, endpoints), ver [`backend/README.md`](backend/README.md) — ese documento es la guía práctica de "cómo correrlo", no una segunda versión más técnica de este documento.
 
 ## 2. Alcance
 
-Cubre: qué hace el sistema, el stack elegido, la arquitectura y organización del código, el modelo de datos, las reglas de negocio, los casos de uso expuestos, y el mecanismo de eliminación lógica y auditoría.
+Cubre: qué hace el sistema, el stack elegido, la arquitectura y organización del código, el modelo de datos, las reglas de negocio, los casos de uso expuestos, el mecanismo de eliminación lógica y auditoría, y la estrategia de pruebas.
 
-No cubre (fuera de alcance de este documento y del proyecto actual): frontend, autenticación/autorización, despliegue a producción, y pruebas automatizadas (pendientes).
+No cubre (fuera de alcance de este documento y del proyecto actual): frontend, autenticación/autorización, y despliegue a producción.
 
 ## 3. ¿Qué es?
 
@@ -137,7 +139,16 @@ gestion-escolar-backend/
 │   │
 │   └── test/
 │       └── java/com/colegio/gestion/
-│           └── ... (pendiente: pruebas unitarias e de integración)
+│           ├── service/          # unitarias, Mockito puro (mocks de repository)
+│           │   ├── EstudianteServiceImplTest.java
+│           │   ├── ProfesorServiceImplTest.java
+│           │   ├── CursoServiceImplTest.java
+│           │   └── AuditoriaServiceImplTest.java
+│           └── controller/       # @WebMvcTest + MockitoBean, sin base de datos
+│               ├── EstudianteControllerTest.java
+│               ├── ProfesorControllerTest.java
+│               ├── CursoControllerTest.java
+│               └── AuditoriaControllerTest.java
 │
 ├── docker-compose.yml
 ├── Dockerfile
@@ -192,6 +203,15 @@ Todos estos endpoints se pueden probar directamente desde Swagger, sin necesidad
 
 **Todo cambio queda registrado.** Cada vez que se crea, actualiza o elimina un estudiante, profesor o curso, queda una entrada en un historial de auditoría: qué acción fue, sobre qué registro, en qué momento, y cómo quedaron los datos en ese instante. Ese historial es de solo consulta.
 
-## 10. Cómo levantarlo
+## 10. Pruebas
+
+El proyecto tiene pruebas automatizadas en dos niveles:
+
+- **Servicios**: prueban las reglas de negocio de la sección 7 de forma aislada, sin base de datos ni servidor real de por medio.
+- **Controllers**: prueban que cada endpoint responde con el código HTTP correcto (200, 201, 204, 400, 404, 409) ante distintos escenarios, sin necesitar base de datos.
+
+Ninguna de las pruebas actuales requiere Docker ni una base de datos corriendo — se ejecutan con `./gradlew test`. La cobertura se mide con JaCoCo (`./gradlew jacocoTestReport`); al día de este documento está por encima del 97%.
+
+## 11. Cómo levantarlo
 
 Los pasos concretos para instalar y correr el proyecto (requisitos, comandos, dónde probarlo) están en [`backend/README.md`](backend/README.md).

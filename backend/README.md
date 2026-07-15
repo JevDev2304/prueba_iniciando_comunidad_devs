@@ -1,6 +1,6 @@
 # Sistema de Gestion Escolar - Backend
 
-API REST en Spring Boot (Java 21) para administrar Estudiantes, Profesores y Cursos. Si buscas una explicación de qué hace el sistema sin tecnicismos, ver [`../SDD-Backend.md`](../SDD-Backend.md). Este README cubre el detalle técnico: cómo levantarlo, endpoints, y decisiones de implementación.
+API REST en Spring Boot (Java 21) para administrar Estudiantes, Profesores y Cursos. Esta es la guía operativa: cómo instalar, correr, probar, y qué endpoints expone. Para entender **qué** hace el sistema y **por qué** está diseñado así (arquitectura, modelo de datos, reglas de negocio), ver [`../SDD-Backend.md`](../SDD-Backend.md).
 
 ## Stack
 
@@ -44,7 +44,14 @@ Copia `.env.example` a `.env` y ajusta `DB_PASSWORD` si quieres una contraseña 
 ./gradlew test
 ```
 
-Los tests de integración usan Testcontainers (levantan su propio PostgreSQL efímero), así que requieren Docker corriendo.
+Todos los tests actuales son unitarios/de capa web: los servicios se prueban con Mockito puro (mocks de los repositorios) y los controllers con `@WebMvcTest` + `@MockitoBean`. **No requieren Docker ni una base de datos corriendo.**
+
+Para ver el reporte de cobertura (JaCoCo):
+
+```bash
+./gradlew jacocoTestReport
+open build/reports/jacoco/test/html/index.html
+```
 
 ## Endpoints principales
 
@@ -60,4 +67,4 @@ Los tests de integración usan Testcontainers (levantan su propio PostgreSQL ef�
 >
 > **Auditoría:** cada creación/actualización/eliminación de las 3 entidades (y cada inscripción/retiro de un curso) queda registrada en la tabla `auditoria`, con un snapshot en JSON del estado del recurso. Consultable de solo lectura en `GET /api/v1/auditoria` (todo el historial) o `GET /api/v1/auditoria?entidad=CURSO&entidadId=3` (historial de un recurso puntual). Ver `service/impl/AuditoriaServiceImpl.java`.
 
-Para una explicación de qué hace el sistema en lenguaje simple, ver [`../SDD-Backend.md`](../SDD-Backend.md).
+Para el diseño del sistema (qué hace, arquitectura, modelo de datos, reglas de negocio), ver [`../SDD-Backend.md`](../SDD-Backend.md).
