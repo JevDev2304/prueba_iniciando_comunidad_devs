@@ -26,6 +26,8 @@ docker compose up -d postgres
 
 La app queda en `http://localhost:8080`. Swagger UI: `http://localhost:8080/swagger-ui/index.html`. Spec OpenAPI: `http://localhost:8080/v3/api-docs`.
 
+> **Datos de ejemplo:** la migración `V3__seed_datos_iniciales.sql` precarga 4 profesores, 4 cursos y 10 estudiantes (con algunas inscripciones ya hechas), para poder probar la API de inmediato sin crear todo a mano. Corre automáticamente la primera vez que Flyway ve una base vacía — si ya tenías datos propios de antes, no se sobreescriben ni se duplican.
+
 > **Nota de puertos:** el `docker-compose.yml` mapea Postgres al puerto **5433** del host (no 5432), porque en varias máquinas de desarrollo ya hay un PostgreSQL local (Homebrew, etc.) escuchando en 5432, y eso haría que la app se conectara silenciosamente al Postgres equivocado en vez del contenedor. Si tu máquina no tiene ese conflicto, puedes cambiar el mapeo a `5432:5432` y ajustar el puerto en `application.yml`.
 
 ## Levantar todo con Docker (app + DB dockerizadas)
