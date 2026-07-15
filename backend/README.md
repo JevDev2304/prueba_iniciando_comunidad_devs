@@ -1,6 +1,6 @@
 # Sistema de Gestion Escolar - Backend
 
-API REST en Spring Boot (Java 21) para administrar Estudiantes, Profesores y Cursos. Ver el diseño completo en [`../SDD-Backend.md`](../SDD-Backend.md).
+API REST en Spring Boot (Java 21) para administrar Estudiantes, Profesores y Cursos. Si buscas una explicación de qué hace el sistema sin tecnicismos, ver [`../SDD-Backend.md`](../SDD-Backend.md). Este README cubre el detalle técnico: cómo levantarlo, endpoints, y decisiones de implementación.
 
 ## Stack
 
@@ -56,6 +56,8 @@ Los tests de integración usan Testcontainers (levantan su propio PostgreSQL ef�
 | Inscripcion | `POST/DELETE /api/v1/cursos/{cursoId}/estudiantes/{estudianteId}` |
 | Auditoria (solo lectura) | `GET /api/v1/auditoria` y `GET /api/v1/auditoria?entidad=CURSO&entidadId=3` |
 
-> **Soft delete:** los `DELETE` de Profesor, Curso y Estudiante no borran la fila, solo marcan `eliminado_en`. Un recurso eliminado lógicamente responde 404 en cualquier lectura posterior, como si no existiera. Ver la sección 16 del [SDD](../SDD-Backend.md) para el detalle completo.
+> **Soft delete:** los `DELETE` de Profesor, Curso y Estudiante no borran la fila, solo marcan `eliminado_en` (columna nullable; `NULL` = activo). Un recurso eliminado lógicamente responde 404 en cualquier lectura posterior, como si no existiera — la restricción se aplica automáticamente vía `@SQLRestriction` en cada entidad (`domain/Profesor.java`, `domain/Curso.java`, `domain/Estudiante.java`). El email queda libre para reutilizarse gracias a un índice único parcial (`WHERE eliminado_en IS NULL`) en vez de un `UNIQUE` de tabla completa.
+>
+> **Auditoría:** cada creación/actualización/eliminación de las 3 entidades (y cada inscripción/retiro de un curso) queda registrada en la tabla `auditoria`, con un snapshot en JSON del estado del recurso. Consultable de solo lectura en `GET /api/v1/auditoria` (todo el historial) o `GET /api/v1/auditoria?entidad=CURSO&entidadId=3` (historial de un recurso puntual). Ver `service/impl/AuditoriaServiceImpl.java`.
 
-Ver el detalle completo de contratos, códigos de error y decisiones de diseño en el [SDD](../SDD-Backend.md).
+Para una explicación de qué hace el sistema en lenguaje simple, ver [`../SDD-Backend.md`](../SDD-Backend.md).
