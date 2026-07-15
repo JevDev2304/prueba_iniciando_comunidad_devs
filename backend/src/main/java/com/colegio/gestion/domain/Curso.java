@@ -11,12 +11,15 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.SQLRestriction;
 
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 
 @Entity
 @Table(name = "curso")
+@SQLRestriction("eliminado_en IS NULL")
 public class Curso {
 
     @Id
@@ -40,6 +43,9 @@ public class Curso {
             inverseJoinColumns = @JoinColumn(name = "estudiante_id")
     )
     private Set<Estudiante> estudiantes = new HashSet<>();
+
+    @Column(name = "eliminado_en")
+    private Instant eliminadoEn;
 
     public Curso() {
     }
@@ -82,5 +88,13 @@ public class Curso {
 
     public void setEstudiantes(Set<Estudiante> estudiantes) {
         this.estudiantes = estudiantes;
+    }
+
+    public Instant getEliminadoEn() {
+        return eliminadoEn;
+    }
+
+    public void setEliminadoEn(Instant eliminadoEn) {
+        this.eliminadoEn = eliminadoEn;
     }
 }

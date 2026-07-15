@@ -7,13 +7,16 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.SQLRestriction;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
 
 @Entity
 @Table(name = "estudiante")
+@SQLRestriction("eliminado_en IS NULL")
 public class Estudiante {
 
     @Id
@@ -34,6 +37,9 @@ public class Estudiante {
 
     @ManyToMany(mappedBy = "estudiantes")
     private Set<Curso> cursos = new HashSet<>();
+
+    @Column(name = "eliminado_en")
+    private Instant eliminadoEn;
 
     public Estudiante() {
     }
@@ -84,5 +90,13 @@ public class Estudiante {
 
     public void setCursos(Set<Curso> cursos) {
         this.cursos = cursos;
+    }
+
+    public Instant getEliminadoEn() {
+        return eliminadoEn;
+    }
+
+    public void setEliminadoEn(Instant eliminadoEn) {
+        this.eliminadoEn = eliminadoEn;
     }
 }

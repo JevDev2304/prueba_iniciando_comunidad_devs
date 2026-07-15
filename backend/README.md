@@ -54,5 +54,8 @@ Los tests de integración usan Testcontainers (levantan su propio PostgreSQL ef�
 | Profesores | `/api/v1/profesores` |
 | Cursos | `/api/v1/cursos` |
 | Inscripcion | `POST/DELETE /api/v1/cursos/{cursoId}/estudiantes/{estudianteId}` |
+| Auditoria (solo lectura) | `GET /api/v1/auditoria` y `GET /api/v1/auditoria?entidad=CURSO&entidadId=3` |
+
+> **Soft delete:** los `DELETE` de Profesor, Curso y Estudiante no borran la fila, solo marcan `eliminado_en`. Un recurso eliminado lógicamente responde 404 en cualquier lectura posterior, como si no existiera. Ver la sección 16 del [SDD](../SDD-Backend.md) para el detalle completo.
 
 Ver el detalle completo de contratos, códigos de error y decisiones de diseño en el [SDD](../SDD-Backend.md).

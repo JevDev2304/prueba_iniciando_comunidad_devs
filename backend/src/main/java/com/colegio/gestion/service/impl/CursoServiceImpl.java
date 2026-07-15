@@ -1,5 +1,6 @@
 package com.colegio.gestion.service.impl;
 
+import com.colegio.gestion.domain.AccionAuditoria;
 import com.colegio.gestion.domain.Curso;
 import com.colegio.gestion.domain.Estudiante;
 import com.colegio.gestion.domain.Profesor;
@@ -12,26 +13,33 @@ import com.colegio.gestion.mapper.CursoMapper;
 import com.colegio.gestion.repository.CursoRepository;
 import com.colegio.gestion.repository.EstudianteRepository;
 import com.colegio.gestion.repository.ProfesorRepository;
+import com.colegio.gestion.service.AuditoriaService;
 import com.colegio.gestion.service.CursoService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 
 @Service
 @Transactional
 public class CursoServiceImpl implements CursoService {
 
+    private static final String ENTIDAD = "CURSO";
+
     private final CursoRepository cursoRepository;
     private final ProfesorRepository profesorRepository;
     private final EstudianteRepository estudianteRepository;
+    private final AuditoriaService auditoriaService;
 
     public CursoServiceImpl(CursoRepository cursoRepository,
                              ProfesorRepository profesorRepository,
-                             EstudianteRepository estudianteRepository) {
+                             EstudianteRepository estudianteRepository,
+                             AuditoriaService auditoriaService) {
         this.cursoRepository = cursoRepository;
         this.profesorRepository = profesorRepository;
         this.estudianteRepository = estudianteRepository;
+        this.auditoriaService = auditoriaService;
     }
 
     @Override
@@ -43,7 +51,10 @@ public class CursoServiceImpl implements CursoService {
         curso.setProfesor(profesor);
 
         Curso guardado = cursoRepository.save(curso);
-        return CursoMapper.toResponse(guardado);
+        CursoResponse response = CursoMapper.toResponse(guardado);
+
+        auditoriaService.registrar(ENTIDAD, response.id(), AccionAuditoria.CREAR, response);
+        return response;
     }
 
     @Override
@@ -70,13 +81,21 @@ public class CursoServiceImpl implements CursoService {
         curso.setProfesor(profesor);
 
         Curso actualizado = cursoRepository.save(curso);
-        return CursoMapper.toResponse(actualizado);
+        CursoResponse response = CursoMapper.toResponse(actualizado);
+
+        auditoriaService.registrar(ENTIDAD, id, AccionAuditoria.ACTUALIZAR, response);
+        return response;
     }
 
     @Override
     public void eliminar(Long id) {
         Curso curso = buscarPorIdOrThrow(id);
-        cursoRepository.delete(curso);
+        CursoResponse snapshot = CursoMapper.toResponse(curso);
+
+        curso.setEliminadoEn(Instant.now());
+        cursoRepository.save(curso);
+
+        auditoriaService.registrar(ENTIDAD, id, AccionAuditoria.ELIMINAR, snapshot);
     }
 
     @Override
@@ -88,7 +107,10 @@ public class CursoServiceImpl implements CursoService {
         estudiante.getCursos().add(curso);
 
         Curso actualizado = cursoRepository.save(curso);
-        return CursoMapper.toResponse(actualizado);
+        CursoResponse response = CursoMapper.toResponse(actualizado);
+
+        auditoriaService.registrar(ENTIDAD, cursoId, AccionAuditoria.ACTUALIZAR, response);
+        return response;
     }
 
     @Override
@@ -100,7 +122,10 @@ public class CursoServiceImpl implements CursoService {
         estudiante.getCursos().remove(curso);
 
         Curso actualizado = cursoRepository.save(curso);
-        return CursoMapper.toResponse(actualizado);
+        CursoResponse response = CursoMapper.toResponse(actualizado);
+
+        auditoriaService.registrar(ENTIDAD, cursoId, AccionAuditoria.ACTUALIZAR, response);
+        return response;
     }
 
     private Profesor buscarProfesorValidoOrThrow(Long profesorId) {
