@@ -6,6 +6,7 @@ import com.colegio.gestion.dto.response.AuditoriaResponse;
 import com.colegio.gestion.dto.response.ProfesorResumenResponse;
 import com.colegio.gestion.repository.AuditoriaRepository;
 import com.colegio.gestion.service.impl.AuditoriaServiceImpl;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,6 +50,20 @@ class AuditoriaServiceImplTest {
         assertThat(guardada.getEntidadId()).isEqualTo(1L);
         assertThat(guardada.getAccion()).isEqualTo(AccionAuditoria.CREAR);
         assertThat(guardada.getDetalle()).contains("\"nombre\":\"Ana\"");
+    }
+
+    @Test
+    void registrar_conFalloDeSerializacion_guardaElToStringComoRespaldo() throws Exception {
+        ObjectMapper objectMapperQueFalla = org.mockito.Mockito.mock(ObjectMapper.class);
+        when(objectMapperQueFalla.writeValueAsString(any()))
+                .thenThrow(org.mockito.Mockito.mock(JsonProcessingException.class));
+        AuditoriaServiceImpl serviceConMapperRoto = new AuditoriaServiceImpl(auditoriaRepository, objectMapperQueFalla);
+
+        serviceConMapperRoto.registrar("PROFESOR", 1L, AccionAuditoria.CREAR, new Object());
+
+        ArgumentCaptor<Auditoria> captor = ArgumentCaptor.forClass(Auditoria.class);
+        verify(auditoriaRepository).save(captor.capture());
+        assertThat(captor.getValue().getDetalle()).isNotNull();
     }
 
     @Test

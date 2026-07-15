@@ -141,4 +141,23 @@ class ProfesorControllerTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status").value(409));
     }
+
+    @Test
+    void crear_conJsonMalFormado_retorna400() throws Exception {
+        mockMvc.perform(post("/api/v1/profesores")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{ esto no es json valido"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void obtenerPorId_conErrorInesperadoDelService_retorna500() throws Exception {
+        when(profesorService.obtenerPorId(1L)).thenThrow(new RuntimeException("fallo inesperado"));
+
+        mockMvc.perform(get("/api/v1/profesores/1"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.status").value(500))
+                .andExpect(jsonPath("$.message").value("Ocurrio un error inesperado"));
+    }
 }

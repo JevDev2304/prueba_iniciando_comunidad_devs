@@ -113,6 +113,31 @@ class CursoServiceImplTest {
     }
 
     @Test
+    void obtenerPorId_existente_retornaCurso() {
+        when(cursoRepository.findById(1L)).thenReturn(Optional.of(cursoConId(1L, profesorConId(1L))));
+
+        CursoResponse response = cursoService.obtenerPorId(1L);
+
+        assertThat(response.id()).isEqualTo(1L);
+        assertThat(response.profesor().id()).isEqualTo(1L);
+    }
+
+    @Test
+    void actualizar_conProfesorValido_retornaCursoActualizadoYRegistraAuditoria() {
+        Curso curso = cursoConId(1L, profesorConId(1L));
+        Profesor nuevoProfesor = profesorConId(2L);
+        when(cursoRepository.findById(1L)).thenReturn(Optional.of(curso));
+        when(profesorRepository.findById(2L)).thenReturn(Optional.of(nuevoProfesor));
+        when(cursoRepository.save(any(Curso.class))).thenReturn(curso);
+
+        CursoResponse response = cursoService.actualizar(1L, new CursoRequest("Algebra II", "actualizado", 2L));
+
+        assertThat(response.id()).isEqualTo(1L);
+        assertThat(curso.getProfesor().getId()).isEqualTo(2L);
+        verify(auditoriaService).registrar(eq("CURSO"), eq(1L), eq(AccionAuditoria.ACTUALIZAR), any());
+    }
+
+    @Test
     void actualizar_conProfesorInexistente_lanzaProfesorInvalidoException() {
         Curso curso = cursoConId(1L, profesorConId(1L));
         when(cursoRepository.findById(1L)).thenReturn(Optional.of(curso));

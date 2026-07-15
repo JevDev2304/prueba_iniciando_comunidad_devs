@@ -123,6 +123,16 @@ class EstudianteServiceImplTest {
     }
 
     @Test
+    void actualizar_conEmailDeOtroEstudiante_lanzaDuplicateEmailException() {
+        when(estudianteRepository.findById(1L)).thenReturn(Optional.of(estudianteConId(1L)));
+        when(estudianteRepository.existsByEmailAndIdNot("luis.perez@colegio.edu", 1L)).thenReturn(true);
+
+        assertThrows(DuplicateEmailException.class, () -> estudianteService.actualizar(1L, requestValido()));
+
+        verify(estudianteRepository, never()).save(any());
+    }
+
+    @Test
     void eliminar_marcaEliminadoEnYRegistraAuditoria() {
         Estudiante existente = estudianteConId(1L);
         when(estudianteRepository.findById(1L)).thenReturn(Optional.of(existente));

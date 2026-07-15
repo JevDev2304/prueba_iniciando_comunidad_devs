@@ -18,10 +18,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -89,11 +91,32 @@ class CursoControllerTest {
     }
 
     @Test
+    void obtenerPorId_existente_retorna200() throws Exception {
+        when(cursoService.obtenerPorId(1L)).thenReturn(cursoResponse());
+
+        mockMvc.perform(get("/api/v1/cursos/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nombre").value("Algebra I"));
+    }
+
+    @Test
     void obtenerPorId_inexistente_retorna404() throws Exception {
         when(cursoService.obtenerPorId(99L)).thenThrow(ResourceNotFoundException.of("Curso", 99L));
 
         mockMvc.perform(get("/api/v1/cursos/99"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void actualizar_conDatosValidos_retorna200() throws Exception {
+        CursoRequest request = new CursoRequest("Algebra II", "actualizado", 1L);
+        when(cursoService.actualizar(eq(1L), any(CursoRequest.class))).thenReturn(cursoResponse());
+
+        mockMvc.perform(put("/api/v1/cursos/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1));
     }
 
     @Test

@@ -18,10 +18,12 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -102,11 +104,33 @@ class EstudianteControllerTest {
     }
 
     @Test
+    void obtenerPorId_existente_retorna200() throws Exception {
+        when(estudianteService.obtenerPorId(1L)).thenReturn(estudianteResponse());
+
+        mockMvc.perform(get("/api/v1/estudiantes/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nombre").value("Luis"));
+    }
+
+    @Test
     void obtenerPorId_inexistente_retorna404() throws Exception {
         when(estudianteService.obtenerPorId(99L)).thenThrow(ResourceNotFoundException.of("Estudiante", 99L));
 
         mockMvc.perform(get("/api/v1/estudiantes/99"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void actualizar_conDatosValidos_retorna200() throws Exception {
+        EstudianteRequest request = new EstudianteRequest("Luis", "Perez", "luis.perez@colegio.edu",
+                LocalDate.of(2010, 5, 20));
+        when(estudianteService.actualizar(eq(1L), any(EstudianteRequest.class))).thenReturn(estudianteResponse());
+
+        mockMvc.perform(put("/api/v1/estudiantes/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1));
     }
 
     @Test
