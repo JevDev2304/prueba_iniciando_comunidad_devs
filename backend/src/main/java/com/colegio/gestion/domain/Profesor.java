@@ -7,12 +7,22 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.SQLRestriction;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * @SQLRestriction aplica "eliminado_en IS NULL" a TODAS las consultas generadas
+ * por Hibernate para esta entidad (findById, findAll, existsBy..., colecciones
+ * relacionadas), incluyendo las derivadas por Spring Data. Es lo que hace que
+ * el soft delete sea transparente para el resto del codigo: un registro
+ * eliminado logicamente se comporta como si no existiera.
+ */
 @Entity
 @Table(name = "profesor")
+@SQLRestriction("eliminado_en IS NULL")
 public class Profesor {
 
     @Id
@@ -33,6 +43,9 @@ public class Profesor {
 
     @OneToMany(mappedBy = "profesor")
     private List<Curso> cursos = new ArrayList<>();
+
+    @Column(name = "eliminado_en")
+    private Instant eliminadoEn;
 
     public Profesor() {
     }
@@ -83,5 +96,13 @@ public class Profesor {
 
     public void setCursos(List<Curso> cursos) {
         this.cursos = cursos;
+    }
+
+    public Instant getEliminadoEn() {
+        return eliminadoEn;
+    }
+
+    public void setEliminadoEn(Instant eliminadoEn) {
+        this.eliminadoEn = eliminadoEn;
     }
 }

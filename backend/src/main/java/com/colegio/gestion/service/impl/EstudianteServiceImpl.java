@@ -1,5 +1,6 @@
 package com.colegio.gestion.service.impl;
 
+import com.colegio.gestion.domain.AccionAuditoria;
 import com.colegio.gestion.domain.Estudiante;
 import com.colegio.gestion.dto.request.EstudianteRequest;
 import com.colegio.gestion.dto.response.EstudianteResponse;
@@ -8,20 +9,26 @@ import com.colegio.gestion.exception.DuplicateEmailException;
 import com.colegio.gestion.exception.ResourceNotFoundException;
 import com.colegio.gestion.mapper.EstudianteMapper;
 import com.colegio.gestion.repository.EstudianteRepository;
+import com.colegio.gestion.service.AuditoriaService;
 import com.colegio.gestion.service.EstudianteService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 
 @Service
 @Transactional
 public class EstudianteServiceImpl implements EstudianteService {
 
-    private final EstudianteRepository estudianteRepository;
+    private static final String ENTIDAD = "ESTUDIANTE";
 
-    public EstudianteServiceImpl(EstudianteRepository estudianteRepository) {
+    private final EstudianteRepository estudianteRepository;
+    private final AuditoriaService auditoriaService;
+
+    public EstudianteServiceImpl(EstudianteRepository estudianteRepository, AuditoriaService auditoriaService) {
         this.estudianteRepository = estudianteRepository;
+        this.auditoriaService = auditoriaService;
     }
 
     @Override
@@ -32,7 +39,10 @@ public class EstudianteServiceImpl implements EstudianteService {
 
         Estudiante estudiante = EstudianteMapper.toEntity(request);
         Estudiante guardado = estudianteRepository.save(estudiante);
-        return EstudianteMapper.toResponse(guardado);
+        EstudianteResponse response = EstudianteMapper.toResponse(guardado);
+
+        auditoriaService.registrar(ENTIDAD, response.id(), AccionAuditoria.CREAR, response);
+        return response;
     }
 
     @Override
@@ -60,13 +70,21 @@ public class EstudianteServiceImpl implements EstudianteService {
 
         EstudianteMapper.applyRequest(estudiante, request);
         Estudiante actualizado = estudianteRepository.save(estudiante);
-        return EstudianteMapper.toResponse(actualizado);
+        EstudianteResponse response = EstudianteMapper.toResponse(actualizado);
+
+        auditoriaService.registrar(ENTIDAD, id, AccionAuditoria.ACTUALIZAR, response);
+        return response;
     }
 
     @Override
     public void eliminar(Long id) {
         Estudiante estudiante = buscarPorIdOrThrow(id);
-        estudianteRepository.delete(estudiante);
+        EstudianteResponse snapshot = EstudianteMapper.toResponse(estudiante);
+
+        estudiante.setEliminadoEn(Instant.now());
+        estudianteRepository.save(estudiante);
+
+        auditoriaService.registrar(ENTIDAD, id, AccionAuditoria.ELIMINAR, snapshot);
     }
 
     private Estudiante buscarPorIdOrThrow(Long id) {

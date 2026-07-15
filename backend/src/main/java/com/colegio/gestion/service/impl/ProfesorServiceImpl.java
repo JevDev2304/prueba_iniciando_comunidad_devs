@@ -1,5 +1,6 @@
 package com.colegio.gestion.service.impl;
 
+import com.colegio.gestion.domain.AccionAuditoria;
 import com.colegio.gestion.domain.Profesor;
 import com.colegio.gestion.dto.request.ProfesorRequest;
 import com.colegio.gestion.dto.response.ProfesorResponse;
@@ -10,22 +11,30 @@ import com.colegio.gestion.exception.ResourceNotFoundException;
 import com.colegio.gestion.mapper.ProfesorMapper;
 import com.colegio.gestion.repository.CursoRepository;
 import com.colegio.gestion.repository.ProfesorRepository;
+import com.colegio.gestion.service.AuditoriaService;
 import com.colegio.gestion.service.ProfesorService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 
 @Service
 @Transactional
 public class ProfesorServiceImpl implements ProfesorService {
 
+    private static final String ENTIDAD = "PROFESOR";
+
     private final ProfesorRepository profesorRepository;
     private final CursoRepository cursoRepository;
+    private final AuditoriaService auditoriaService;
 
-    public ProfesorServiceImpl(ProfesorRepository profesorRepository, CursoRepository cursoRepository) {
+    public ProfesorServiceImpl(ProfesorRepository profesorRepository,
+                                CursoRepository cursoRepository,
+                                AuditoriaService auditoriaService) {
         this.profesorRepository = profesorRepository;
         this.cursoRepository = cursoRepository;
+        this.auditoriaService = auditoriaService;
     }
 
     @Override
@@ -36,7 +45,10 @@ public class ProfesorServiceImpl implements ProfesorService {
 
         Profesor profesor = ProfesorMapper.toEntity(request);
         Profesor guardado = profesorRepository.save(profesor);
-        return ProfesorMapper.toResponse(guardado);
+        ProfesorResponse response = ProfesorMapper.toResponse(guardado);
+
+        auditoriaService.registrar(ENTIDAD, response.id(), AccionAuditoria.CREAR, response);
+        return response;
     }
 
     @Override
@@ -64,7 +76,10 @@ public class ProfesorServiceImpl implements ProfesorService {
 
         ProfesorMapper.applyRequest(profesor, request);
         Profesor actualizado = profesorRepository.save(profesor);
-        return ProfesorMapper.toResponse(actualizado);
+        ProfesorResponse response = ProfesorMapper.toResponse(actualizado);
+
+        auditoriaService.registrar(ENTIDAD, id, AccionAuditoria.ACTUALIZAR, response);
+        return response;
     }
 
     @Override
@@ -76,7 +91,12 @@ public class ProfesorServiceImpl implements ProfesorService {
             throw new ProfesorConCursosAsignadosException(id, cantidadCursos);
         }
 
-        profesorRepository.delete(profesor);
+        ProfesorResponse snapshot = ProfesorMapper.toResponse(profesor);
+
+        profesor.setEliminadoEn(Instant.now());
+        profesorRepository.save(profesor);
+
+        auditoriaService.registrar(ENTIDAD, id, AccionAuditoria.ELIMINAR, snapshot);
     }
 
     private Profesor buscarPorIdOrThrow(Long id) {

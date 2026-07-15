@@ -574,8 +574,8 @@ springdoc:
 - Autenticación/autorización (Spring Security + JWT) para el rol "administrador" mencionado en la historia de usuario.
 - Endpoint de reasignación masiva de cursos al eliminar un profesor.
 - Paginación y filtros (`?nombre=`, `?especialidad=`) en los listados.
-- Auditoría (`created_at`/`updated_at`) vía Spring Data JPA Auditing.
 - Rate limiting / caching de listados.
+- Endpoint para restaurar un registro eliminado lógicamente (`POST /profesores/{id}/restaurar`).
 
 ---
 
@@ -591,3 +591,33 @@ springdoc:
 | 6. Recurso inexistente → 404 | Sección 9 |
 | 7. PostgreSQL dockerizado | Sección 12.1 |
 | 8. Arquitectura en capas + excepciones centralizadas | Secciones 4, 5, 9 |
+
+---
+
+## 16. Adenda — Soft delete y auditoría (rama `migracion-delete-soft`)
+
+Migración `V2__agregar_soft_delete_y_auditoria.sql`, añadida sobre el `V1` ya existente (no se edita una migración ya aplicada — ver sección 6.3 sobre por qué se versiona así).
+
+### 16.1 Soft delete
+
+`Profesor`, `Curso` y `Estudiante` ganan una columna `eliminado_en TIMESTAMPTZ` (nullable). `NULL` = activo; con fecha = eliminado lógicamente en ese momento. Nunca se ejecuta un `DELETE` real sobre estas tablas — `eliminar()` en los tres services pasa a ser un `UPDATE` que setea `eliminado_en = now()`.
+
+Cada entidad lleva `@SQLRestriction("eliminado_en IS NULL")` (anotación de Hibernate, no de JPA estándar). Esto hace que **todas** las consultas generadas por Hibernate para esa entidad —`findById`, `findAll`, los `existsBy...` derivados, e incluso la carga de colecciones relacionadas (`curso.getEstudiantes()`, `profesor.getCursos()`)— excluyan automáticamente los registros eliminados, sin tener que tocar cada repositorio o servicio uno por uno. Un registro eliminado lógicamente se comporta, para el resto del código, exactamente como si no existiera: `GET` por id devuelve 404, no aparece en listados, y no cuenta para la regla "profesor con cursos asignados" del criterio 3.
+
+**Efecto secundario que hubo que resolver:** el `UNIQUE` de `email` a nivel de tabla habría impedido reutilizar el email de un registro ya eliminado lógicamente (la fila sigue existiendo físicamente). Se reemplazó por un **índice único parcial**:
+```sql
+CREATE UNIQUE INDEX ux_profesor_email_activo ON profesor (email) WHERE eliminado_en IS NULL;
+```
+Así el email solo debe ser único entre registros activos — el mismo criterio que ya aplican `existsByEmail`/`existsByEmailAndIdNot` gracias al `@SQLRestriction`.
+
+### 16.2 Auditoría
+
+Tabla `auditoria` genérica (no una tabla de historial por entidad), con columnas `entidad` (`PROFESOR`/`CURSO`/`ESTUDIANTE`), `entidad_id`, `accion` (`CREAR`/`ACTUALIZAR`/`ELIMINAR`), `detalle` (snapshot en JSON del DTO de respuesta en el momento de la acción) y `fecha` (poblada automáticamente con `@CreationTimestamp`).
+
+`AuditoriaService.registrar(...)` se invoca desde cada `*ServiceImpl` **después** de cada `crear`, `actualizar` y `eliminar` (y también en `inscribirEstudiante`/`retirarEstudiante` de `CursoServiceImpl`, como `ACTUALIZAR`), dentro de la misma transacción — si la escritura de auditoría fallara, la operación completa hace rollback, manteniendo dato y auditoría siempre consistentes. El snapshot se serializa con el `ObjectMapper` de Jackson (ya disponible como bean por `spring-boot-starter-web`), reutilizando los DTOs `*Response` existentes en vez de serializar las entidades JPA directamente (evita recursión con las relaciones bidireccionales).
+
+Expuesta de solo lectura en `GET /api/v1/auditoria` (todo el historial) y `GET /api/v1/auditoria?entidad=CURSO&entidadId=3` (historial de un recurso puntual).
+
+### 16.3 Decisión descartada: Hibernate Envers
+
+Se evaluó usar [Hibernate Envers](https://hibernate.org/orm/envers/) (auditoría automática vía `@Audited`, genera una tabla `_AUD` por entidad con versionado completo) en vez de la tabla `auditoria` manual. Se descartó por el mismo criterio que MapStruct/Lombok (sección 3): agrega una dependencia y "magia" de generación de esquema que no aporta suficiente valor para el alcance de esta prueba, frente a una tabla explícita y fácil de razonar.
