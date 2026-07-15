@@ -1,0 +1,11 @@
+# Herramientas / IDE
+.claude/
+.idea/
+*.iml
+.vscode/
+
+# Sistema operativo
+.DS_Store
+
+# Variables de entorno locales
+.env
